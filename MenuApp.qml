@@ -17,6 +17,146 @@ ApplicationWindow {
                 }
             }
             model: snapshots
+            MouseArea {
+                id: menuCatcher
+                height: parent.height / 2
+                width: parent.width / 2
+                anchors.centerIn: parent
+                onStateChanged: console.log("State", state)
+                property real waitingX: 0
+                property real waitingY: 0
+                property real lastY: 0
+                property real delta: 0
+                property real clickRadius: Theme.itemSizeSmall
+                Rectangle {
+                    id: hilightRect
+                    opacity: menuCatcher.state === "waiting"
+                        ? (menuCatcher.delta === 0 ? 0.2 : 0) : 0
+                    color: "white"
+                    x:  menuCatcher.waitingX - width / 2
+                    y:  menuCatcher.waitingY
+                    height: menuCatcher.clickRadius
+                    width: height
+                    Image {
+                        source: "image://theme/icon-m-page-down"
+                        opacity: menuCatcher.state === "waiting" ? 1.0 : 0.0
+                        anchors.centerIn: parent
+                    }
+                }
+                Rectangle {
+                    id: optionalTopBar
+                    height: 2
+                    width: parent.parent.width
+                    x: parent.parent.x - parent.x
+                    color: "white"
+                    opacity: menuCatcher.state === "dragging" ? 0.5 : 0.0
+                    y: menuCatcher.waitingY
+                }
+                states: [
+                    State {
+                        name: "waiting"
+                        PropertyChanges { target: dragSlotTimer; running: true }
+                    }
+                    , State {
+                        name: "idle"
+                        PropertyChanges { target: dragSlotTimer; running: false }
+                    }
+                    , State {
+                        name: "dragging"
+                        PropertyChanges { target: dragSlotTimer; running: false }
+                    }
+                ]
+                Timer {
+                    id: dragSlotTimer
+                    interval: 800
+                    onTriggered: {
+                        console.log("T")
+                        if (menuCatcher.state !== "dragging")
+                            menuCatcher.state = "idle"
+                    }
+                }
+                onPressed: {
+                    console.log("P")
+                    var startCapture = true
+                    if (menuCatcher.state === "waiting") {
+                        if (menuCatcher.waitingX > 0 && menuCatcher.waitingY > 0) {
+                            var dx = Math.abs(mouse.x - menuCatcher.waitingX)
+                            var dy =  mouse.y - menuCatcher.waitingY
+                            if ( dx < menuCatcher.clickRadius / 2
+                                 && dy > 0 && dy < menuCatcher.clickRadius) {
+                                // consider as click inside
+                                startCapture = false
+                                mouse.accepted = true
+                                menuCatcher.state = "dragging"
+                                menuCatcher.waitingX = mouse.x
+                                menuCatcher.waitingY = mouse.y
+                            }
+                        }
+                    }
+                    if (startCapture) {
+                        mouse.accepted = false
+                        menuCatcher.waitingX = mouse.x
+                        menuCatcher.waitingY = mouse.y
+                        menuCatcher.state = "waiting"
+                    }
+                }
+                function resetWaiting() {
+                    menuCatcher.waitingX = 0
+                    menuCatcher.lastY = menuCatcher.waitingY
+                    menuCatcher.waitingY = 0
+                    menuCatcher.state = "idle"
+                }
+                onPositionChanged : {
+                    console.log("Pos", menuCatcher.state)
+                    var delta = mouse.y - menuCatcher.waitingY
+                    if (delta < 0) {
+                        mouse.accepted = false
+                        resetWaiting()
+                    } else {
+                        menuCatcher.delta = delta
+                    }
+                }
+                onReleased: {
+                    console.log("R")
+                    resetWaiting()
+                    mouse.accepted = false
+                }
+                //propagateComposedEvents: false
+                preventStealing: true
+                Rectangle {
+                    opacity: 0.1
+                    color: "red"
+                    anchors.fill: parent
+                }
+            }
+            BackgroundItem {
+                id: centerMenu
+                width: parent.width
+                property real maxItemSize: Theme.itemSizeLarge
+                property bool isOpened: false
+                opacity: menuCatcher.delta >= maxItemSize ? 1 : openFraction * 0.5
+                y: (menuCatcher.waitingY ? menuCatcher.waitingY
+                    : menuCatcher.lastY) + menuCatcher.y
+                property real openFraction: Math.min(menuCatcher.delta / maxItemSize, 1.0)
+                height: openFraction * maxItemSize
+                // onHeightChanged: {
+                //     isOpened = height >= maxItemSize
+                // }
+                //color: "white"
+                Rectangle {
+                    opacity: 0.2
+                    color: "white"
+                    anchors.fill: parent
+                }
+                Label {
+                    text: "Click Me!"
+                    anchors.centerIn: parent
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: menuCatcher.delta = 0
+                }
+            }
         }
         Item {
             id: positionArea
