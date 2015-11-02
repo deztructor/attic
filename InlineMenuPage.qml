@@ -13,19 +13,24 @@ Page {
             height: baseHeight
             readonly property real dHeight: height - baseHeight
             width: ListView.view.width
-            readonly property int maxHeight: menuItem.childrenRect.height
+            readonly property int maxHeight: menuColumn.childrenRect.height
 
             property real dragStartX: 0
             property real dragX: 0
             property real dx: rightHanded ? dragStartX - dragX : dragX - dragStartX
             property real dragXMax: Theme.itemSizeMedium
 
-            property real openFraction: state === "opening" ? Math.min(dx / dragXMax, 1.0) : 0.0
+            property real span: state === "opening" ? Math.min(dx / dragXMax, 1.0) : 0.0
             
             property real dragStartY: 0
-            property alias dragY: menuItem.dragY
+            property alias dragY: menuColumn.dragY
             
             property InlineMenuItem currentMenuItem
+            property real selectionY: currentMenuItem
+                ? currentMenuItem.y + currentMenuItem.height / 2
+                : 0
+
+            preventStealing: state === "opening"
             state: "initial"
             onStateChanged: console.log("State", state)
             states: [
@@ -36,6 +41,8 @@ Page {
                     PropertyChanges { target: listItem; dragX: 0 }
                     PropertyChanges { target: listItem; dragStartY: 0 }
                     PropertyChanges { target: listItem; dragY: 0 }
+                    //PropertyChanges { target: listItem; preventStealing: false }
+                    PropertyChanges { target: listItem; currentMenuItem: null }
                 }
                 , State {
                     name: "detecting"
@@ -61,30 +68,51 @@ Page {
                 Rectangle {
                     id: menuArea
                     x: rightHanded ? menuIndicator.width - width : 0
-                    width: listItem.openFraction
-                        ? Math.max(menuIndicator.maxWidth * listItem.openFraction, menuIndicator.width)
+                    width: listItem.span
+                        ? Math.max(menuIndicator.maxWidth * listItem.span, menuIndicator.width)
                         : parent.width
-                    onWidthChanged: console.log("W from", listItem.openFraction)
+                    onWidthChanged: console.log("W from", listItem.span)
                     height: listItem.height
                     color: "black"
                     opacity: 0.2
                 }
                 Item {
                     height: menuIndicator.height
-                    width: menuIndicator.width
-                    x: rightHanded ? menuArea.x : menuArea.x + menuArea.width - width
-                    Image {
-                        readonly property string indicatorImage: "image://theme/icon-m-"
-                            + (rightHanded ? "left" : "right")
-                        readonly property string hintImage: "image://theme/icon-m-down"
-                        source: openFraction < 0.9 ? indicatorImage : hintImage
-                        anchors.centerIn: parent
-                        opacity: listItem.state !== "initial" ? 1.0 : 0.2
+                    width: menuArea.width
+                    x: menuArea.x
+                    y: listItem.selectionY ? listItem.selectionY - height / 2 : 0
+                    Item {
+                        id: menuIcon
+                        height: parent.height
+                        width: height
+                        Image {
+                            readonly property string expandIcon: "image://theme/icon-m-"
+                                + (rightHanded ? "left" : "right")
+                            readonly property string selectIcon: "image://theme/icon-m-"
+                                + (rightHanded ? "right" : "left")
+                            readonly property string hintImage: "image://theme/icon-m-down"
+                            source: listItem.selectionY
+                                ? selectIcon : (span < 0.9 ? expandIcon : hintImage)
+                            anchors.centerIn: parent
+                            opacity: listItem.state !== "initial" ? 1.0 : 0.2
+                        }
+                    }
+                    Rectangle {
+                        opacity: listItem.selectionY ? 0.5 : 0.0
+                        x: menuIcon.width
+                        height: Theme.paddingLarge
+                        width: parent.width - menuIcon.width
+                        anchors.verticalCenter: parent.verticalCenter
+                        gradient: Gradient {
+                            GradientStop { position: 0.0; color: Theme.rgba(Theme.primaryColor, 0.1) }
+                            GradientStop { position: 0.5; color: Theme.rgba(Theme.primaryColor, 0.2) }
+                            GradientStop { position: 1.0; color: Theme.rgba(Theme.primaryColor, 0.1) }
+                        }
                     }
                 }
             }
             Column {
-                id: menuItem
+                id: menuColumn
                 width: parent.width
                 height: parent.height
                 clip: true
@@ -120,8 +148,8 @@ Page {
             }
             function resetState() {
                 console.log("resetState")
-                currentMenuItem = null
-                preventStealing = false
+                // currentMenuItem = null
+                // preventStealing = false
                 state = "initial"
                 console.log("reseted", currentMenuItem)
             }
@@ -144,7 +172,7 @@ Page {
                     if (dy > listItem.height / 2) {
                         state = "initial"
                     } else if (dx > listItem.height / 4) {
-                        preventStealing = true
+                        //preventStealing = true
                         state = "opening"
                     }
                 }
@@ -153,7 +181,7 @@ Page {
                                             || mouse.y > maxHeight)) {
                         currentMenuItem = null
                     }
-                    var menuDY = maxHeight ? maxHeight * openFraction : 0
+                    var menuDY = maxHeight ? maxHeight * span : 0
                     height = Math.max(baseHeight, Math.min(baseHeight + menuDY, maxHeight))
                     dragY = mouse.y
                 }
