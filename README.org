@@ -1,0 +1,7 @@
+* Playground for different random and crazy ideas
+** License
+   By default the license is MIT (https://opensource.org/licenses/MIT).
+** QML playground
+*** Carousel menu
+
+    [[file:carousel-menu.org][Carousel menu test implementation]]
