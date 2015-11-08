@@ -367,7 +367,7 @@
       }
       Image {
           id: highlightImage
-          source: "icon-m-selection.png"
+          source: "highlight.png"
           visible: false
       }
       Component {

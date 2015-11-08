@@ -34,7 +34,7 @@ void main() {
 var carouselItemFragment = "
 varying highp vec2 qt_TexCoord0;
 uniform sampler2D source;
-uniform sampler2D selectedSource;
+uniform sampler2D highlightTexture;
 uniform mediump float spread;
 uniform lowp float qt_Opacity;
 uniform bool isSelected;
@@ -42,7 +42,7 @@ void main() {
     float opac = qt_Opacity * spread;
     mediump vec4 t1 = texture2D(source, qt_TexCoord0);
     if (isSelected) {
-        mediump vec4 t2 = texture2D(selectedSource, qt_TexCoord0);
+        mediump vec4 t2 = texture2D(highlightTexture, qt_TexCoord0);
         gl_FragColor = mix(t1, t2, 0.5);
     } else {
         gl_FragColor = t1 * opac;

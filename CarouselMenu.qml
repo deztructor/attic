@@ -187,8 +187,8 @@ MouseArea {
         }
     }
     Image {
-        id: selectedImage
-        source: "icon-m-selection.png"
+        id: highlightImage
+        source: "highlight.png"
         visible: false
     }
     Component {
@@ -208,7 +208,7 @@ MouseArea {
                 height: maxH//parent.height
                 width: maxW//parent.width
                 property variant source: menuImage
-                property variant selectedSource: selectedImage
+                property variant highlightTexture: highlightImage
                 property real radius: menu.radius
                 property real angle: menu.itemPosition(model.index)
                 property real spread: menu.spread
