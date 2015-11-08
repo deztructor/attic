@@ -65,20 +65,20 @@ MouseArea {
     }
     function pressedAngle(angle) {
         var res = normalize(angle)
-        var quadrant = Math.floor(res / (maxAngle / 4))
-        console.log("QUAD", quadrant, "for", res)
-        switch (quadrant) {
-        case 0:
-        case 3:
-            res += angleStep
-            break
-        case 1:
-        case 2:
-            res += angleStep
-            break
-        default:
-            console.log("Quadrant???", angle)
-        }
+        // var quadrant = Math.floor(res / (maxAngle / 4))
+        // console.log("QUAD", quadrant, "for", res)
+        // switch (quadrant) {
+        // case 0:
+        // case 3:
+        //     res += angleStep
+        //     break
+        // case 1:
+        // case 2:
+        //     res += angleStep
+        //     break
+        // default:
+        //     console.log("Quadrant???", angle)
+        // }
         return res;
     }
     function getPointData(pos) {
