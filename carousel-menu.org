@@ -1,0 +1,296 @@
+* COMMENT Carousel Menu Example
+
+#+BEGIN_SRC js :tangle CarouselMenuApp.qml :exports code
+  import QtQuick 2.0
+  import Sailfish.Silica 1.0
+  
+  ApplicationWindow {
+      id: mainWindow
+  
+      ListModel {
+          id: menuModel
+      }
+      initialPage: CarouselAppPage {
+      }
+  }
+#+END_SRC
+
+#+BEGIN_SRC glsl :noweb-ref item_vertex
+  uniform highp mat4 qt_Matrix;
+  attribute highp vec4 qt_Vertex;
+  attribute highp vec2 qt_MultiTexCoord0;
+  varying highp vec2 qt_TexCoord0;
+  uniform mediump vec2 center;
+  uniform mediump float radius;
+  uniform mediump float angle;
+  uniform mediump float spread;
+  uniform mediump float maxW;
+  uniform mediump float maxH;
+  uniform mediump float scaleFactor;
+  uniform mediump float pointerAngle;
+  void main() {
+      qt_TexCoord0 = qt_MultiTexCoord0;
+      highp vec4 shift = vec4(1.0, 1.0, 0.0, 0.0);
+      shift.x = cos(angle) * radius;
+      shift.y = sin(angle) * radius;
+      highp mat4 scale = qt_Matrix * mat4(scaleFactor, 0.0, 0.0, 0.0, 0.0, scaleFactor, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0);
+      gl_Position = scale * (qt_Vertex + shift);
+  }
+#+END_SRC
+
+#+BEGIN_SRC glsl :noweb-ref item_fragment
+  varying highp vec2 qt_TexCoord0;
+  uniform sampler2D source;
+  uniform sampler2D selectedSource;
+  uniform mediump float spread;
+  uniform mediump float scaleFactor;
+  uniform lowp float qt_Opacity;
+  uniform bool isSelected;
+  void main() {
+      float opac = qt_Opacity * spread;
+      mediump vec4 t1 = texture2D(source, qt_TexCoord0);
+      if (isSelected) {
+          mediump vec4 t2 = texture2D(selectedSource, qt_TexCoord0);
+          gl_FragColor = mix(t1, t2, 0.5);
+      } else {
+          gl_FragColor = t1 * opac;
+      }
+  }
+#+END_SRC
+
+#+BEGIN_SRC js :noweb tangle :tangle CarouselMenuShaders.js :exports code
+  var carouselItemVertex = "
+  //<<item_vertex>>
+  "
+  
+  var carouselItemFragment = "
+  //<<item_fragment>>
+  "
+  
+#+END_SRC
+
+#+BEGIN_SRC js :exports code :noweb-ref list_model
+  ListElement { icon: "image://theme/icon-m-folder"; name: "Folder" }
+  ListElement { icon: "image://theme/icon-m-bluetooth"; name: "Bluetooth" }
+  ListElement { icon: "image://theme/icon-m-document"; name: "Document" }
+  ListElement { icon: "image://theme/icon-m-traffic"; name: "Traffic" }
+  ListElement { icon: "image://theme/icon-m-favorite"; name: "Favorite" }
+  ListElement { icon: "image://theme/icon-m-timer"; name: "Timer" }
+#+END_SRC
+
+#+BEGIN_SRC js :noweb tangle :tangle CarouselAppPage.qml :exports code
+  import QtQuick 2.0
+  import Sailfish.Silica 1.0
+  import "CarouselMenuShaders.js" as MenuShaders
+  Page {
+      ListModel {
+          id: menuModel
+          //<<list_model>>
+      }
+      MouseArea {
+          id: menu
+          anchors.fill: parent
+  
+          signal selected(int index)
+          onSelected: console.log("Selected", index)
+          
+          property real itemsCount: menuModel.count
+          readonly property real maxItemSize: Theme.itemSizeExtraLarge + Theme.paddingLarge
+          property real minRadius: 0
+          property real maxRadius: maxItemSize * itemsCount / Math.PI / 1.5
+          property real dR: maxRadius - minRadius
+          property real radius: minRadius + dR * spread
+          property real spread: 0.0
+          property real shift: 0.0//(1 - spread) * maxAngle / 2
+          property point centerShift: Qt.point(0.0, 0.0)
+          state: "folded"
+          onStateChanged: {
+              console.log("state", state)
+              switch (state) {
+              case "folded":
+                  //menuPressedPos = Qt.point(0, 0)
+                  spread = 0
+                  centerShift = Qt.point(0.0, 0.0)
+                  break;
+              default:
+                  break
+              }
+          }
+  
+          property point center: menuPressedPos //Qt.point(width / 2, height / 2)
+          readonly property real maxAngle: 2 * Math.PI
+          property real angleStep: maxAngle / menuModel.count
+          property real pointerAngle: 0
+          property point menuPressedPos: Qt.point(0, 0)
+          property bool dragging: false
+          onPressed: {
+              if (state === "folded") {
+                  menuPressedPos = Qt.point(mouse.x, mouse.y)
+                  state = "dragging"
+              }
+          }
+          function normalize(angle) {
+              if (angle >= maxAngle) {
+                  angle = angle - maxAngle
+              } else if (angle < 0) {
+                  angle = maxAngle + angle
+              }
+              return angle
+          }
+          function itemPosition(n) {
+              return normalize(n * angleStep + shift)
+          }
+          function angleToItem(angle, shift) {
+              var res = Math.round(normalize(angle - shift) / angleStep)
+              return res >= menuModel.count ? 0 : res
+          }
+          function getPointData(pos) {
+              var res = {valid: false}
+              //var pos = Qt.point(mouse.x, mouse.y)
+              var dpos = Qt.point(pos.x - menuPressedPos.x, pos.y - menuPressedPos.y)
+              var maxShift = maxItemSize / 4
+              var ax = Math.abs(dpos.x), ay = Math.abs(dpos.y)
+              res.centerShift = Qt.point(ax > maxShift ? (dpos.x > 0 ? maxShift : -maxShift) : dpos.x
+                                         , ay > maxShift ? (dpos.y > 0 ? maxShift : -maxShift) : dpos.y)
+              var dsum = ax + ay
+              if (dsum > 0) {
+                  res.valid = true
+                  var r = Math.sqrt(Math.pow(ax, 2) + Math.pow(ay, 2))
+                  var scale = r / Theme.itemSizeExtraLarge
+                  res.spread = Math.min(scale, 1.0)
+                  res.shift = (scale <= 1.0 ? scale : (scale - Math.floor(scale))) * maxAngle
+                  var angle = Math.atan2(dpos.y, dpos.x)
+                  // get it positive
+                  angle = normalize(angle)
+                  res.item = angleToItem(angle, res.shift)
+                  res.angle = angle
+              }
+              return res
+          }
+          onPositionChanged: {
+              if (state === "dragging" || state === "choosing") {
+                  var data = getPointData(Qt.point(mouse.x, mouse.y))
+                  if (!data.valid)
+                      return;
+                  //if (spread < 1.0)
+                  spread = data.spread
+                  state = spread >= 1.0 ? "choosing" : "dragging"
+                  shift = data.shift
+                  pointerAngle = data.angle
+                  currentItem = data.item
+                  centerShift = data.centerShift
+              }
+          }
+          Behavior on spread { NumberAnimation {} }
+          property int currentItem: -1
+          onReleased: {
+              if (state === "dragging")
+                  state = "folded"
+          }
+          onClicked: {
+              if (state === "choosing") {
+                  state = "choose"
+              } else if (state === "choose") {
+                  var data = getPointData(Qt.point(mouse.x, mouse.y))
+                  if (data.valid) {
+                      if (data.item === currentItem)
+                          selected(currentItem)
+                  }
+                  state = "folded"
+              }
+          }
+          function dump(name, v) {
+              //console.log(name, v)
+              return v
+          }
+          Rectangle {
+              id: debugSeeMenuArea
+              visible: false
+              color: "red"
+              opacity: 0.2
+              anchors.fill: parent
+          }
+          Item {
+              property point center: menu.center
+              x: center.x - width / 2// + menu.centerShift.x
+              y: center.y - height / 2// + menu.centerShift.y
+              height: Theme.itemSizeExtraLarge
+              width: Theme.itemSizeExtraLarge
+              Image {
+                  id: centerImage
+                  source: "image://theme/icon-m-dot"
+                  opacity: menu.state === "dragging" ? 1.0 : 0.0
+                  Behavior on opacity { FadeAnimation {} }
+                  anchors.centerIn: parent
+              }
+              Rectangle {
+                  id: debugViewCenterItemArea
+                  color: "red"
+                  opacity: 0.3
+                  visible: false
+                  anchors.fill: parent
+              }
+              Label {
+                  id: centerLabel
+                  text: menu.currentItem >= 0 ? menuModel.get(menu.currentItem).name : ""
+                  opacity: menu.state === "choose" || menu.state === "choosing" ? 1.0 : 0.0
+                  Behavior on opacity { FadeAnimation {} }
+                  anchors.centerIn: parent
+              }
+          }
+          Image {
+              id: selectedImage
+              source: "icon-m-selection.png"
+              visible: false
+          }
+          Component {
+              id: menuItem
+              Item  {
+                  width: Theme.itemSizeLarge * menu.spread
+                  height: width
+                  x: menu.center.x - width / 2
+                  y: menu.center.y - height / 2
+                  Image {
+                      visible: false
+                      id: menuImage
+                      source: model.icon
+                      //position: model.index
+                  }
+                  ShaderEffect {
+                      height: maxH//parent.height
+                      width: maxW//parent.width
+                      property variant source: menuImage
+                      property variant selectedSource: selectedImage
+                      property point center: menu.center
+                      property real radius: menu.radius
+                      property real angle: menu.itemPosition(model.index)
+                      property real spread: menu.spread
+                      property real maxW: Theme.itemSizeLarge
+                      property real maxH: Theme.itemSizeLarge
+                      property real maxAngle: menu.maxAngle
+                      property real pointerAngle: menu.pointerAngle
+                      property bool isSelected: spread >= 1.0 && menu.currentItem === model.index
+                      property real scaleFactor: {
+                          var d = Math.abs(angle - pointerAngle)
+                          if (d > maxAngle / 2) d = maxAngle - d
+                          //return spread * (0.5 + (1.0 - Math.sqrt(d / maxAngle)) / 2)
+                          return spread * (1.0 - Math.sqrt(d / maxAngle))
+                      }
+                      vertexShader: MenuShaders.carouselItemVertex
+                      fragmentShader: MenuShaders.carouselItemFragment
+                   }
+              }
+          }
+          Repeater {
+              model: menuModel
+              delegate: menuItem
+          }
+      }
+  }
+#+END_SRC
+
+* COMMENT Defining noweb variables
+# Local Variables:
+# org-babel-noweb-wrap-start: "//<<"
+# End:
+
