@@ -1,4 +1,4 @@
-* COMMENT Carousel Menu Example
+* Carousel Menu Example
 
 #+BEGIN_SRC js :tangle CarouselMenuApp.qml :exports code
   import QtQuick 2.0
@@ -6,12 +6,7 @@
   
   ApplicationWindow {
       id: mainWindow
-  
-      ListModel {
-          id: menuModel
-      }
-      initialPage: CarouselAppPage {
-      }
+      initialPage: CarouselAppPage { }
   }
 #+END_SRC
 
@@ -20,20 +15,28 @@
   attribute highp vec4 qt_Vertex;
   attribute highp vec2 qt_MultiTexCoord0;
   varying highp vec2 qt_TexCoord0;
-  uniform mediump vec2 center;
   uniform mediump float radius;
   uniform mediump float angle;
   uniform mediump float spread;
-  uniform mediump float maxW;
-  uniform mediump float maxH;
-  uniform mediump float scaleFactor;
   uniform mediump float pointerAngle;
+  uniform mediump float maxAngle;
+  
   void main() {
       qt_TexCoord0 = qt_MultiTexCoord0;
       highp vec4 shift = vec4(1.0, 1.0, 0.0, 0.0);
       shift.x = cos(angle) * radius;
       shift.y = sin(angle) * radius;
-      highp mat4 scale = qt_Matrix * mat4(scaleFactor, 0.0, 0.0, 0.0, 0.0, scaleFactor, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0);
+  
+      mediump float d = abs(angle - pointerAngle);
+      if (d > maxAngle / 2.0) {
+          d = maxAngle - d;
+      }
+      mediump float scaleFactor = spread * (1.0 - sqrt(d / maxAngle));
+      highp mat4 scale = qt_Matrix * mat4(scaleFactor, 0.0, 0.0, 0.0
+                                          , 0.0, scaleFactor, 0.0, 0.0
+                                          , 0.0, 0.0, 1.0, 0.0
+                                          , 0.0, 0.0, 0.0, 1.0);
+  
       gl_Position = scale * (qt_Vertex + shift);
   }
 #+END_SRC
@@ -43,7 +46,6 @@
   uniform sampler2D source;
   uniform sampler2D selectedSource;
   uniform mediump float spread;
-  uniform mediump float scaleFactor;
   uniform lowp float qt_Opacity;
   uniform bool isSelected;
   void main() {
@@ -58,7 +60,7 @@
   }
 #+END_SRC
 
-#+BEGIN_SRC js :noweb tangle :tangle CarouselMenuShaders.js :exports code
+#+BEGIN_SRC js :noweb tangle :tangle CarouselMenuShaders.js :exports code :shebang "// generated file"
   var carouselItemVertex = "
   //<<item_vertex>>
   "
@@ -67,6 +69,41 @@
   //<<item_fragment>>
   "
   
+#+END_SRC
+
+#+BEGIN_SRC js :exports code :noweb-ref hint_label
+  Label {
+      id: hintLabel
+      x: menu.center.x < parent.width / 2
+          ? parent.width - width
+          : 0
+      y: menu.center.y < parent.height / 2
+          ? parent.height - height
+          : 0
+      width: parent.width / 4 * 3
+      height: Theme.itemSizeExtraLarge * 2
+      wrapMode: Text.WordWrap
+      text: {
+          var res = ""
+          switch (menu.state) {
+          case "folded":
+              res = "Press anywhere, hold and start to move away."
+              break
+          case "dragging":
+              res = "Hold and move away from initial press position. Release to fold menu back."
+              break
+          case "choosing":
+              res = "Hold and move away or move around to choose item. Move back to initial press position and release to fold menu."
+              break
+          case "choose":
+              res = "Click on the chosen item to confirm selection or click in another place to cancel."
+              break
+          default:
+              res = "No help for the current state"
+          }
+          return res
+      }
+  }
 #+END_SRC
 
 #+BEGIN_SRC js :exports code :noweb-ref list_model
@@ -78,7 +115,7 @@
   ListElement { icon: "image://theme/icon-m-timer"; name: "Timer" }
 #+END_SRC
 
-#+BEGIN_SRC js :noweb tangle :tangle CarouselAppPage.qml :exports code
+#+BEGIN_SRC js :noweb tangle :tangle CarouselAppPage.qml :exports code :shebang "// generated file"
   import QtQuick 2.0
   import Sailfish.Silica 1.0
   import "CarouselMenuShaders.js" as MenuShaders
@@ -87,6 +124,7 @@
           id: menuModel
           //<<list_model>>
       }
+      //<<hint_label>>
       MouseArea {
           id: menu
           anchors.fill: parent
@@ -261,7 +299,6 @@
                       width: maxW//parent.width
                       property variant source: menuImage
                       property variant selectedSource: selectedImage
-                      property point center: menu.center
                       property real radius: menu.radius
                       property real angle: menu.itemPosition(model.index)
                       property real spread: menu.spread
@@ -269,13 +306,8 @@
                       property real maxH: Theme.itemSizeLarge
                       property real maxAngle: menu.maxAngle
                       property real pointerAngle: menu.pointerAngle
-                      property bool isSelected: spread >= 1.0 && menu.currentItem === model.index
-                      property real scaleFactor: {
-                          var d = Math.abs(angle - pointerAngle)
-                          if (d > maxAngle / 2) d = maxAngle - d
-                          //return spread * (0.5 + (1.0 - Math.sqrt(d / maxAngle)) / 2)
-                          return spread * (1.0 - Math.sqrt(d / maxAngle))
-                      }
+                      property bool isSelected: (spread >= 1.0
+                                                 && menu.currentItem === model.index)
                       vertexShader: MenuShaders.carouselItemVertex
                       fragmentShader: MenuShaders.carouselItemFragment
                    }
@@ -291,6 +323,7 @@
 
 * COMMENT Defining noweb variables
 # Local Variables:
+# eval: (setq-local org-babel-noweb-wrap-start "//<<")
 # org-babel-noweb-wrap-start: "//<<"
 # End:
 
