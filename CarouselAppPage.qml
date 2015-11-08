@@ -1,8 +1,9 @@
-// generated file
+// File is generated from carousel-menu.org
 
 import QtQuick 2.0
 import Sailfish.Silica 1.0
 import "CarouselMenuShaders.js" as MenuShaders
+
 Page {
     ListModel {
         id: menuModel
@@ -54,5 +55,6 @@ Page {
     }
     CarouselMenu {
         id: menu
+        // use model property
     }
 }

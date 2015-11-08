@@ -1,7 +1,9 @@
 * Playground for different random and crazy ideas
 ** License
-   By default the license is MIT (https://opensource.org/licenses/MIT).
+   By default the license is [[https://opensource.org/licenses/MIT][MIT License]].
 ** QML playground
+   GUI elements for Sailfish OS. There are also [[file:aux-components.org][Auxiliary components]].
 *** Carousel menu
-
     [[file:carousel-menu.org][Carousel menu test implementation]]
+*** Inline menu
+    [[file:InlineMenuApp.qml][Inline menu application]]

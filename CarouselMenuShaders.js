@@ -1,4 +1,4 @@
-// generated file
+// File is generated from carousel-menu.org
 
 var carouselItemVertex = "
 uniform highp mat4 qt_Matrix;

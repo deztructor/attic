@@ -1,7 +1,10 @@
 * Carousel Menu Example
+
+#+PROPERTY: header-args:js :shebang // File is generated from carousel-menu.org
+
 ** Main carousel menu page
 
-#+BEGIN_SRC js :noweb tangle :tangle CarouselMenu.qml :exports code :shebang "// generated file"
+#+BEGIN_SRC js :noweb tangle :tangle CarouselMenu.qml :exports code
   import QtQuick 2.0
   import Sailfish.Silica 1.0
   import "CarouselMenuShaders.js" as MenuShaders
@@ -248,13 +251,13 @@
   uniform mediump float spread;
   uniform mediump float pointerAngle;
   uniform mediump float maxAngle;
-  
+
   void main() {
       qt_TexCoord0 = qt_MultiTexCoord0;
       highp vec4 shift = vec4(1.0, 1.0, 0.0, 0.0);
       shift.x = cos(angle) * radius;
       shift.y = sin(angle) * radius;
-  
+
       mediump float d = abs(angle - pointerAngle);
       if (d > maxAngle / 2.0) {
           d = maxAngle - d;
@@ -264,7 +267,7 @@
                                           , 0.0, scaleFactor, 0.0, 0.0
                                           , 0.0, 0.0, 1.0, 0.0
                                           , 0.0, 0.0, 0.0, 1.0);
-  
+
       gl_Position = scale * (qt_Vertex + shift);
   }
 #+END_SRC
@@ -297,7 +300,7 @@
 
     Wrapping shaders in javascript variables for QML component readability.
 
-#+BEGIN_SRC js :noweb tangle :tangle CarouselMenuShaders.js :exports code :shebang "// generated file"
+#+BEGIN_SRC js :noweb tangle :tangle CarouselMenuShaders.js :exports code
   var carouselItemVertex = "
   //<<item_vertex>>
   "
@@ -309,40 +312,9 @@
 #+END_SRC
 
 ** Auxiliary code
-*** Banner component
-
-   Simple banner component to show in the middle of the screen.
-
-#+BEGIN_SRC js :tangle SimpleBanner.qml :exports code
-  import QtQuick 2.0
-  import Sailfish.Silica 1.0
-  
-  Rectangle {
-      id: banner
-      width: parent.width - Theme.itemSizeMedium
-      height: Theme.itemSizeLarge
-      anchors.centerIn: parent
-      opacity: 0
-      Behavior on opacity { FadeAnimation {} }
-      color: "black"
-      Label {
-          id: bannerLabel
-          anchors.centerIn: parent
-      }
-      function show(text) {
-          bannerLabel.text = text
-          opacity = 0.7
-          bannerTimer.running = true
-      }
-      Timer {
-          id: bannerTimer
-          interval: 1000
-          onTriggered: banner.opacity = 0
-      }
-  }
-#+END_SRC
-
 *** Model data
+
+    Just random test data using default system icons.
 
 #+BEGIN_SRC js :exports code :noweb-ref list_model
   ListElement { icon: "image://theme/icon-m-folder"; name: "Folder" }
@@ -356,7 +328,7 @@
   ListElement { icon: "image://theme/icon-m-timer"; name: "Timer" }
 #+END_SRC
 
-*** Hints for first usage.
+*** Hints for the first usage
 
 #+BEGIN_SRC js :exports code :noweb-ref hint_label
   Label {
@@ -395,12 +367,12 @@
 #+END_SRC
 
 ** Test application
-***  Application skeleton.
-
+***  Application skeleton
+     
 #+BEGIN_SRC js :tangle CarouselMenuApp.qml :exports code
   import QtQuick 2.0
   import Sailfish.Silica 1.0
-  
+
   ApplicationWindow {
       id: mainWindow
       initialPage: CarouselAppPage { }
@@ -409,10 +381,11 @@
 
 *** Application main page
 
-#+BEGIN_SRC js :noweb tangle :tangle CarouselAppPage.qml :exports code :shebang "// generated file"
+#+BEGIN_SRC js :noweb tangle :tangle CarouselAppPage.qml :exports code
   import QtQuick 2.0
   import Sailfish.Silica 1.0
   import "CarouselMenuShaders.js" as MenuShaders
+
   Page {
       ListModel {
           id: menuModel
@@ -424,10 +397,10 @@
       }
       CarouselMenu {
           id: menu
+          // use model property
       }
   }
 #+END_SRC
-
 
 * COMMENT Defining noweb variables
 # Local Variables:
