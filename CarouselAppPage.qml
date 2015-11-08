@@ -31,26 +31,33 @@ Page {
                 res = "Press anywhere, hold and start to move away."
                 break
             case "dragging":
-                res = "Hold and move away from initial press position. Release to fold menu back."
+                res = "To start selection, hold and move away from the initial press position.<br/> Or just release to fold menu back."
                 break
             case "choosing":
-                res = "Hold and move away or move around to choose item. Move back to initial press position and release to fold menu."
+                res = "To choose item: hold and move away or move around, then release to trigger.<br/>
+    To fold menu back: Move back to the place near initial press position until dot is shown and release."
                 break
             case "choose":
                 res = "Click on the chosen item to confirm selection or click in another place to cancel."
                 break
             default:
-                res = "No help for the current state"
+                res = "There is no help for the current state"
             }
             return res
         }
+    }
+    SimpleBanner {
+        id: banner
     }
     MouseArea {
         id: menu
         anchors.fill: parent
 
         signal selected(int index)
-        onSelected: console.log("Selected", index)
+        onSelected: {
+            console.log("Selected", index)
+            banner.show(menuModel.get(index).name)
+        }
         
         property real itemsCount: menuModel.count
         readonly property real maxItemSize: Theme.itemSizeExtraLarge + Theme.paddingLarge
@@ -141,21 +148,22 @@ Page {
         }
         Behavior on spread { NumberAnimation {} }
         property int currentItem: -1
+        onCurrentItemChanged: console.log("Current", currentItem >= 0
+                                          ? menuModel.get(currentItem).name
+                                          : "-1")
         onReleased: {
-            if (state === "dragging")
+            if (state === "dragging") {
                 state = "folded"
-        }
-        onClicked: {
-            if (state === "choosing") {
-                state = "choose"
-            } else if (state === "choose") {
+            } else if (state === "choosing") {
                 var data = getPointData(Qt.point(mouse.x, mouse.y))
                 if (data.valid) {
+                    console.log("ITEMS", data.item, currentItem)
                     if (data.item === currentItem)
                         selected(currentItem)
                 }
                 state = "folded"
             }
+
         }
         function dump(name, v) {
             //console.log(name, v)
@@ -219,7 +227,6 @@ Page {
                     width: maxW//parent.width
                     property variant source: menuImage
                     property variant selectedSource: selectedImage
-                    property point center: menu.center
                     property real radius: menu.radius
                     property real angle: menu.itemPosition(model.index)
                     property real spread: menu.spread
@@ -227,12 +234,8 @@ Page {
                     property real maxH: Theme.itemSizeLarge
                     property real maxAngle: menu.maxAngle
                     property real pointerAngle: menu.pointerAngle
-                    property bool isSelected: spread >= 1.0 && menu.currentItem === model.index
-                    // property real scaleFactor: {
-                    //     var d = Math.abs(angle - pointerAngle)
-                    //     if (d > maxAngle / 2) d = maxAngle - d
-                    //     return spread * (1.0 - Math.sqrt(d / maxAngle))
-                    // }
+                    property bool isSelected: (spread >= 1.0
+                                               && menu.currentItem === model.index)
                     vertexShader: MenuShaders.carouselItemVertex
                     fragmentShader: MenuShaders.carouselItemFragment
                  }

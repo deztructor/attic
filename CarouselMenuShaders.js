@@ -5,12 +5,9 @@ uniform highp mat4 qt_Matrix;
 attribute highp vec4 qt_Vertex;
 attribute highp vec2 qt_MultiTexCoord0;
 varying highp vec2 qt_TexCoord0;
-uniform mediump vec2 center;
 uniform mediump float radius;
 uniform mediump float angle;
 uniform mediump float spread;
-uniform mediump float maxW;
-uniform mediump float maxH;
 uniform mediump float pointerAngle;
 uniform mediump float maxAngle;
 
